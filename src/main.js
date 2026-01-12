@@ -1,18 +1,18 @@
-
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+import { EffectComposer } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { createWorld, animateWorld, spawnDataPacket } from './world.js';
 import { auth } from './firebase-config.js';
 
-
 // --- Scene Setup ---
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x050510, 0.02); // Deep Space Fog
+scene.fog = new THREE.FogExp2(0x050510, 0.02);
 
 // --- Camera ---
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.z = 8;
-camera.position.y = 0;
 
 // --- Renderer ---
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -21,14 +21,24 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 document.body.appendChild(renderer.domElement);
 
-// --- Controls (Restricted for cinematic field) ---
+// --- Post-Processing (Bloom) ---
+const renderScene = new RenderPass(scene, camera);
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+bloomPass.threshold = 0.2;
+bloomPass.strength = 2.0; // High glow
+bloomPass.radius = 0.5;
+
+const composer = new EffectComposer(renderer);
+composer.addPass(renderScene);
+composer.addPass(bloomPass);
+
+// --- Controls ---
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
-controls.enableZoom = false; // Disable zoom to keep UI framing
-controls.enablePan = false;
+controls.enableZoom = false;
 controls.autoRotate = true;
-controls.autoRotateSpeed = 0.2; // Slow drift
+controls.autoRotateSpeed = 0.5;
 
 // --- Lighting ---
 const ambientLight = new THREE.AmbientLight(0x404040, 2);
@@ -38,227 +48,168 @@ const pointLight = new THREE.PointLight(0x00f3ff, 2, 50);
 pointLight.position.set(5, 5, 5);
 scene.add(pointLight);
 
-const coreLight = new THREE.PointLight(0xbc13fe, 1, 20); // Inner core purple glow
+const coreLight = new THREE.PointLight(0xbc13fe, 1, 20);
 coreLight.position.set(0, 0, 0);
 scene.add(coreLight);
 
-
 // --- World Content ---
 const worldObjects = createWorld(scene);
-
 
 // --- State Management ---
 const gameState = {
     warp: false,
     intensity: 1.0,
-    typingCooldown: 0
+    typingCooldown: 0,
+    loggedIn: false
 };
 
-
 // --- Animation Loop ---
-const clock = new THREE.Clock(); // For smooth animation
+const clock = new THREE.Clock();
 
 function animate() {
     requestAnimationFrame(animate);
 
     const elapsedTime = clock.getElapsedTime();
-    const delta = clock.getDelta();
 
     // Smooth return to base intensity
     if (gameState.intensity > 1.0) {
         gameState.intensity -= 0.05;
     }
 
-    // Update controls
     controls.update();
-
-    // Animate World Objects
     animateWorld(worldObjects, elapsedTime, gameState);
 
-    // Dynamic Camera Drift (Parallax) if NOT warping
-    if (!gameState.warp) {
-        // Subtle mouse parallax could go here, but OrbitControls handles rotation nicely.
-    } else {
-        // Warp Camera Effect: Shake + Zoom In
-        camera.position.z = THREE.MathUtils.lerp(camera.position.z, 0, 0.02);
-        camera.position.x += (Math.random() - 0.5) * 0.05; // Shake
-        camera.position.y += (Math.random() - 0.5) * 0.05; // Shake
+    // Warp shake
+    if (gameState.warp) {
+        const shake = 0.05;
+        camera.position.x += (Math.random() - 0.5) * shake;
+        camera.position.y += (Math.random() - 0.5) * shake;
     }
 
-    renderer.render(scene, camera);
+    // Render via Composer (includes Bloom)
+    composer.render();
 }
 
 animate();
 
 
-// --- Interaction Logic ---
+// --- UI Logic ---
 const ui = {
     username: document.getElementById('username'),
     password: document.getElementById('password'),
     form: document.getElementById('login-form'),
     btn: document.getElementById('btn-login'),
     panel: document.getElementById('login-panel'),
-    status: document.getElementById('status-msg')
+    status: document.getElementById('status-msg'),
+    // Dashboard elements
+    dashboard: document.getElementById('dashboard-panel'),
+    greeting: document.getElementById('user-greeting'),
+    logoutBtn: document.getElementById('btn-logout'),
+    terminal: document.getElementById('terminal-feed')
 };
 
-// 1. Typing Effects
 function handleTyping() {
-    // Spawn particles
     spawnDataPacket(scene, worldObjects);
-
-    // Boost intensity (spins core faster)
     gameState.intensity = 5.0;
-
-    // Play sound? (Browser policy restricts audio context usually, sticking to visuals)
 }
 
-ui.username.addEventListener('input', handleTyping);
-ui.password.addEventListener('input', handleTyping);
-
-// 2. Focus/Blur Effects
-const focusCamera = () => {
-    // Zoom in slightly logic if we want, or just stop auto-rotate?
-    controls.autoRotate = false;
-};
-const blurCamera = () => {
-    controls.autoRotate = true;
-};
-
-ui.username.addEventListener('focus', focusCamera);
-ui.username.addEventListener('blur', blurCamera);
-ui.password.addEventListener('focus', focusCamera);
-ui.password.addEventListener('blur', blurCamera);
+if (ui.username) {
+    ui.username.addEventListener('input', handleTyping);
+    ui.password.addEventListener('input', handleTyping);
+    ui.username.addEventListener('focus', () => controls.autoRotate = false);
+    ui.username.addEventListener('blur', () => controls.autoRotate = true);
+    ui.password.addEventListener('focus', () => controls.autoRotate = false);
+    ui.password.addEventListener('blur', () => controls.autoRotate = true);
+}
 
 
-// 3. Login Validation (Mock Auth)
+// LOGIN HANDLER
 ui.form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const user = ui.username.value.trim().toLowerCase();
-    const pass = ui.password.value;
 
-    // Visual Feedback: Processing from start
     ui.status.textContent = "ESTABLISHING UPLINK...";
     ui.status.className = "status-msg";
     ui.btn.disabled = true;
-    ui.btn.textContent = "CONNECTING...";
-    ui.btn.style.opacity = "0.7";
 
     try {
-        // --- MOCK AUTHENTICATION (ACTIVE) ---
-        // Simulate Network Delay
+        // --- MOCK AUTH ---
         await new Promise(r => setTimeout(r, 1500));
 
-        if (user === 'other') {
-            console.log("Mock: Anonymous login success");
-        } else if (user === 'aadi' || user === 'nanniii') {
-            console.log(`Mock: User login success for ${user}`);
+        if (user === 'other' || user === 'aadi' || user === 'nanniii') {
+            console.log("Mock success");
         } else {
-            throw { code: 'auth/unknown-identity', message: 'Identity Unknown' };
+            throw { message: 'Identity Unknown' };
         }
 
-        /* 
-        // --- REAL FIREBASE AUTHENTICATION (INACTIVE) ---
-        let userCredential;
-        if (user === 'other') {
-             // Anonymous Auth
-             const { signInAnonymously } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
-             userCredential = await signInAnonymously(auth);
-        } else if (user === 'aadi' || user === 'nanniii') {
-             // Email Auth
-             const { signInWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
-             const email = `${user}@nexus.bot`; 
-             userCredential = await signInWithEmailAndPassword(auth, email, pass);
-        } else {
-             await new Promise(r => setTimeout(r, 800));
-             throw { code: 'auth/unknown-identity', message: 'Identity Unknown' };
-        }
-        */
+        /* FIREBASE AUTH (Commented) */
 
-        // If we get here, we are authenticated
-        initiateWarpSequence();
+        // Success Flow
+        transitionToDashboard(user);
 
     } catch (error) {
-        console.error("Auth Failed:", error);
-
-        // Reset Button
+        console.error(error);
         ui.btn.disabled = false;
-        ui.btn.textContent = "INITIALIZE";
-        ui.btn.style.opacity = "1";
+        ui.status.textContent = "ACCESS DENIED";
+        ui.status.className = "status-msg error";
 
-        let msg = "ACCESS DENIED";
-        if (error.code === 'auth/wrong-password') msg = "INVALID PASSCODE";
-        if (error.code === 'auth/user-not-found') msg = "UNKNOWN IDENTITY"; // Main error for unknown users
-        if (error.code === 'auth/unknown-identity') msg = "UNKNOWN IDENTITY";
-
-        visualReject(msg);
+        // Error Shake
+        ui.panel.style.transform = "translateX(10px)";
+        setTimeout(() => ui.panel.style.transform = "translateX(-10px)", 50);
+        setTimeout(() => ui.panel.style.transform = "translateX(0)", 100);
     }
 });
 
-function initiateWarpSequence() {
-    // 1. Lock UI
-    ui.username.disabled = true;
-    ui.password.disabled = true;
-    ui.btn.innerHTML = "ACCESS GRANTED";
+function transitionToDashboard(username) {
+    gameState.loggedIn = true;
+
+    // 1. Success UI
+    ui.status.textContent = "ACCESS GRANTED";
+    ui.status.className = "status-msg success";
     ui.btn.style.borderColor = "#33ff33";
     ui.btn.style.color = "#33ff33";
-    ui.status.textContent = "NEURAL LINK ESTABLISHED. INITIATING JUMP...";
-    ui.status.className = "status-msg success";
 
-    // 2. Hide UI gradually
-    ui.panel.classList.add('fade-out'); // Add transition class to fade out
-
-    // 3. Trigger 3D Warp
+    // 2. Warp Effect Logic
     gameState.warp = true;
 
-    // 4. Whiteout / Redirect (Simulated)
+    // 3. UI Transition
     setTimeout(() => {
-        // Create white overlay
-        const div = document.createElement('div');
-        div.style.position = 'fixed';
-        div.style.top = '0';
-        div.style.left = '0';
-        div.style.width = '100%';
-        div.style.height = '100%';
-        div.style.background = 'white';
-        div.style.zIndex = '9999';
-        div.style.opacity = '0';
-        div.style.transition = 'opacity 2s ease';
-        document.body.appendChild(div);
+        ui.panel.classList.add('fade-out'); // Hide login
 
-        // Trigger fade to white
-        requestAnimationFrame(() => div.style.opacity = '1');
-
-        // Message after whiteout
         setTimeout(() => {
-            document.body.innerHTML = '<h1 style="color:black; text-align:center; margin-top: 20%; font-family: sans-serif;">WELCOME TO THE SYSTEM</h1>';
-        }, 2000);
+            // Show Dashboard
+            ui.dashboard.classList.remove('hidden');
+            // Trigger reflow
+            void ui.dashboard.offsetWidth;
+            ui.dashboard.classList.add('visible'); // Fade in
 
-    }, 3000); // 3 seconds of warp flight
-}
+            ui.greeting.textContent = `WELCOME ${username.toUpperCase()}`;
 
-function visualReject(msg = "ACCESS DENIED") {
-    // Shake animation
-    ui.panel.style.transform = "translateY(0) translateX(10px)";
-    setTimeout(() => ui.panel.style.transform = "translateY(0) translateX(-10px)", 50);
-    setTimeout(() => ui.panel.style.transform = "translateY(0) translateX(10px)", 100);
-    setTimeout(() => ui.panel.style.transform = "translateY(0) translateX(0)", 150);
+            // Stop extreme warp, settle into cruise
+            gameState.warp = false;
+            controls.autoRotateSpeed = 2.0; // Fast spin for energy
 
-    ui.status.innerText = msg.toUpperCase();
-    ui.status.className = "status-msg error";
-    ui.btn.disabled = false;
+            // Add terminal line
+            const line = document.createElement('div');
+            line.innerHTML = `> User ${username} authenticated.<br>> Session started.`;
+            ui.terminal.appendChild(line);
 
-    // Dim core briefly (Red pulse?)
-    if (worldObjects.core) {
-        worldObjects.core.material.emissive.setHex(0xff0000);
-        setTimeout(() => worldObjects.core.material.emissive.setHex(0x001133), 500);
-    }
+        }, 1000);
+    }, 1500);
 }
 
 
-// --- Resize Handler ---
+// LOGOUT HANDLER
+if (ui.logoutBtn) {
+    ui.logoutBtn.addEventListener('click', () => {
+        location.reload(); // Simple reload to logout
+    });
+}
+
+// Resize
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    composer.setSize(window.innerWidth, window.innerHeight);
 });
