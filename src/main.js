@@ -2,6 +2,7 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js';
 import { createWorld, animateWorld, spawnDataPacket } from './world.js';
+import { auth } from './firebase-config.js';
 
 // --- Scene Setup ---
 const scene = new THREE.Scene();
@@ -128,25 +129,57 @@ ui.password.addEventListener('focus', focusCamera);
 ui.password.addEventListener('blur', blurCamera);
 
 
-// 3. Login Validation (The "xoxo" Check)
-ui.form.addEventListener('submit', (e) => {
+// 3. Login Validation (Firebase Auth)
+ui.form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const user = ui.username.value.trim().toLowerCase();
     const pass = ui.password.value;
 
-    let isAuthenticated = false;
+    // Visual Feedback: Processing from start
+    ui.status.textContent = "ESTABLISHING UPLINK...";
+    ui.status.className = "status-msg";
+    ui.btn.disabled = true;
+    ui.btn.textContent = "CONNECTING...";
+    ui.btn.style.opacity = "0.7";
 
-    // Authentication Logic
-    if ((user === 'aadi' || user === 'nanniii') && pass === 'xoxo') {
-        isAuthenticated = true;
-    } else if (user === 'other' && pass === '') {
-        isAuthenticated = true;
-    }
+    try {
+        let userCredential;
 
-    if (isAuthenticated) { // SECURE PASSWORD CHECK :P
+        if (user === 'other') {
+            // Anonymous Auth
+            const { signInAnonymously } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+            userCredential = await signInAnonymously(auth);
+            console.log("Anonymous login success", userCredential);
+        } else if (user === 'aadi' || user === 'nanniii') {
+            // Email Auth
+            const { signInWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+            const email = `${user}@nexus.bot`; // Construct fake email
+            userCredential = await signInWithEmailAndPassword(auth, email, pass);
+            console.log("User login success", userCredential.user.email);
+        } else {
+            // Artificial delay to mimic server check for unknown users before rejecting
+            await new Promise(r => setTimeout(r, 800));
+            throw { code: 'auth/unknown-identity', message: 'Identity Unknown' };
+        }
+
+        // If we get here, we are authenticated
         initiateWarpSequence();
-    } else {
-        visualReject();
+
+    } catch (error) {
+        console.error("Auth Failed:", error);
+
+        // Reset Button
+        ui.btn.disabled = false;
+        ui.btn.textContent = "INITIALIZE";
+        ui.btn.style.opacity = "1";
+
+        let msg = "ACCESS DENIED";
+        if (error.code === 'auth/wrong-password') msg = "INVALID PASSCODE";
+        if (error.code === 'auth/user-not-found') msg = "UNKNOWN IDENTITY";
+        if (error.code === 'auth/too-many-requests') msg = "SYSTEM LOCKED (Too Many Attempts)";
+        if (error.code === 'auth/network-request-failed') msg = "CONNECTION ERROR";
+
+        visualReject(msg);
     }
 });
 
