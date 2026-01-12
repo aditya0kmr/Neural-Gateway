@@ -2,6 +2,7 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js';
 import { createWorld, animateWorld, spawnDataPacket } from './world.js';
+import { auth } from './firebase-config.js';
 
 
 // --- Scene Setup ---
@@ -143,20 +144,35 @@ ui.form.addEventListener('submit', async (e) => {
     ui.btn.style.opacity = "0.7";
 
     try {
+        // --- MOCK AUTHENTICATION (ACTIVE) ---
         // Simulate Network Delay
         await new Promise(r => setTimeout(r, 1500));
 
         if (user === 'other') {
-            // Simulated Anonymous Login
             console.log("Mock: Anonymous login success");
         } else if (user === 'aadi' || user === 'nanniii') {
-            // Simulated User Login
             console.log(`Mock: User login success for ${user}`);
-            // In a real mock, we might check password here, but for "sudo" mode we accept any password
         } else {
-            // Simulated Failure
             throw { code: 'auth/unknown-identity', message: 'Identity Unknown' };
         }
+
+        /* 
+        // --- REAL FIREBASE AUTHENTICATION (INACTIVE) ---
+        let userCredential;
+        if (user === 'other') {
+             // Anonymous Auth
+             const { signInAnonymously } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+             userCredential = await signInAnonymously(auth);
+        } else if (user === 'aadi' || user === 'nanniii') {
+             // Email Auth
+             const { signInWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+             const email = `${user}@nexus.bot`; 
+             userCredential = await signInWithEmailAndPassword(auth, email, pass);
+        } else {
+             await new Promise(r => setTimeout(r, 800));
+             throw { code: 'auth/unknown-identity', message: 'Identity Unknown' };
+        }
+        */
 
         // If we get here, we are authenticated
         initiateWarpSequence();
