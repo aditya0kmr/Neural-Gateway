@@ -60,7 +60,9 @@ const gameState = {
     warp: false,
     intensity: 1.0,
     typingCooldown: 0,
-    loggedIn: false
+    loggedIn: false,
+    failedAttempts: 0,
+    lockoutTime: 0
 };
 
 // --- Animation Loop ---
@@ -122,12 +124,47 @@ if (ui.username) {
     ui.password.addEventListener('blur', () => controls.autoRotate = true);
 }
 
+function visualReject(message) {
+    ui.status.textContent = message;
+    ui.status.className = "status-msg error";
+    ui.btn.disabled = false; // Ensure button is re-enabled
+
+    // Error Shake
+    ui.panel.style.transform = "translateX(10px)";
+    setTimeout(() => ui.panel.style.transform = "translateX(-10px)", 50);
+    setTimeout(() => ui.panel.style.transform = "translateX(0)", 100);
+}
+
 
 // LOGIN HANDLER
 ui.form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const user = ui.username.value.trim().toLowerCase();
+    const pass = ui.password.value.trim();
 
+    // --- RATE LIMIT CHECK ---
+    if (gameState.failedAttempts >= 5) {
+        const resetTime = 30000; // 30 seconds lockout
+        const timeLeft = Math.ceil((gameState.lockoutTime - Date.now()) / 1000);
+
+        if (Date.now() < gameState.lockoutTime) {
+            visualReject(`SYSTEM LOCKED (${timeLeft}s)`);
+            ui.btn.disabled = false;
+            return;
+        } else {
+            // Reset after timeout
+            gameState.failedAttempts = 0;
+        }
+    }
+
+    // --- PASSWORD VALIDATION ---
+    if (pass.length < 6) {
+        visualReject("PASSWORD TOO SHORT");
+        ui.btn.disabled = false;
+        return;
+    }
+
+    // Visual Feedback
     ui.status.textContent = "ESTABLISHING UPLINK...";
     ui.status.className = "status-msg";
     ui.btn.disabled = true;
@@ -136,11 +173,17 @@ ui.form.addEventListener('submit', async (e) => {
         // --- MOCK AUTH ---
         await new Promise(r => setTimeout(r, 1500));
 
+        let success = false;
         if (user === 'other' || user === 'aadi' || user === 'nanniii') {
-            console.log("Mock success");
-        } else {
-            throw { message: 'Identity Unknown' };
+            success = true;
         }
+
+        if (!success) {
+            throw { code: 'auth/invalid-credential', message: 'Identity check failed' };
+        }
+
+        // Reset counters on success
+        gameState.failedAttempts = 0;
 
         /* FIREBASE AUTH (Commented) */
 
@@ -148,15 +191,17 @@ ui.form.addEventListener('submit', async (e) => {
         transitionToDashboard(user);
 
     } catch (error) {
-        console.error(error);
-        ui.btn.disabled = false;
-        ui.status.textContent = "ACCESS DENIED";
-        ui.status.className = "status-msg error";
+        console.error("Login Error:", error);
 
-        // Error Shake
-        ui.panel.style.transform = "translateX(10px)";
-        setTimeout(() => ui.panel.style.transform = "translateX(-10px)", 50);
-        setTimeout(() => ui.panel.style.transform = "translateX(0)", 100);
+        // Increment Rate Limit
+        gameState.failedAttempts++;
+        if (gameState.failedAttempts >= 5) {
+            gameState.lockoutTime = Date.now() + 30000; // 30s lock
+            visualReject("SYSTEM LOCKED");
+        } else {
+            // Generic Error Message to prevent enumeration
+            visualReject("INVALID CREDENTIALS");
+        }
     }
 });
 
