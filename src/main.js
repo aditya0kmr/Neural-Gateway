@@ -2,7 +2,7 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js';
 import { createWorld, animateWorld, spawnDataPacket } from './world.js';
-import { auth } from './firebase-config.js';
+
 
 // --- Scene Setup ---
 const scene = new THREE.Scene();
@@ -129,7 +129,7 @@ ui.password.addEventListener('focus', focusCamera);
 ui.password.addEventListener('blur', blurCamera);
 
 
-// 3. Login Validation (Firebase Auth)
+// 3. Login Validation (Mock Auth)
 ui.form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const user = ui.username.value.trim().toLowerCase();
@@ -143,22 +143,18 @@ ui.form.addEventListener('submit', async (e) => {
     ui.btn.style.opacity = "0.7";
 
     try {
-        let userCredential;
+        // Simulate Network Delay
+        await new Promise(r => setTimeout(r, 1500));
 
         if (user === 'other') {
-            // Anonymous Auth
-            const { signInAnonymously } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
-            userCredential = await signInAnonymously(auth);
-            console.log("Anonymous login success", userCredential);
+            // Simulated Anonymous Login
+            console.log("Mock: Anonymous login success");
         } else if (user === 'aadi' || user === 'nanniii') {
-            // Email Auth
-            const { signInWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
-            const email = `${user}@nexus.bot`; // Construct fake email
-            userCredential = await signInWithEmailAndPassword(auth, email, pass);
-            console.log("User login success", userCredential.user.email);
+            // Simulated User Login
+            console.log(`Mock: User login success for ${user}`);
+            // In a real mock, we might check password here, but for "sudo" mode we accept any password
         } else {
-            // Artificial delay to mimic server check for unknown users before rejecting
-            await new Promise(r => setTimeout(r, 800));
+            // Simulated Failure
             throw { code: 'auth/unknown-identity', message: 'Identity Unknown' };
         }
 
@@ -175,9 +171,8 @@ ui.form.addEventListener('submit', async (e) => {
 
         let msg = "ACCESS DENIED";
         if (error.code === 'auth/wrong-password') msg = "INVALID PASSCODE";
-        if (error.code === 'auth/user-not-found') msg = "UNKNOWN IDENTITY";
-        if (error.code === 'auth/too-many-requests') msg = "SYSTEM LOCKED (Too Many Attempts)";
-        if (error.code === 'auth/network-request-failed') msg = "CONNECTION ERROR";
+        if (error.code === 'auth/user-not-found') msg = "UNKNOWN IDENTITY"; // Main error for unknown users
+        if (error.code === 'auth/unknown-identity') msg = "UNKNOWN IDENTITY";
 
         visualReject(msg);
     }
