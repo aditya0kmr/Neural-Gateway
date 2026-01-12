@@ -1,0 +1,33 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Interactive Core</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="ui-layer">
+        <div class="login-container" id="login-panel">
+            <h1>NEXUS GATEWAY</h1>
+            
+            <form id="login-form" onsubmit="return false;">
+                <div class="input-group">
+                    <input type="text" id="username" required autocomplete="off">
+                    <label>IDENTITY</label>
+                </div>
+                
+                <div class="input-group">
+                    <input type="password" id="password" required>
+                    <label>ACCESS CODE</label>
+                </div>
+
+                <button type="submit" id="btn-login">Initialize</button>
+                <div class="status-msg" id="status-msg"></div>
+            </form>
+        </div>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+</body>
+</html>
