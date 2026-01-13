@@ -250,10 +250,10 @@
 
                 setTimeout(() => {
                     ui.panel.classList.add('fade-out');
+                    // Redirect to the Game World
                     setTimeout(() => {
-                        ui.dashboard.classList.add('visible');
-                        ui.greeting.innerText = `WELCOME ${u.toUpperCase()}`;
-                    }, 500);
+                        window.location.href = "citadel_local.html";
+                    }, 800);
                 }, 1000);
             } else {
                 ui.status.innerText = "INVALID CREDENTIALS";

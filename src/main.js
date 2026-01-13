@@ -316,24 +316,16 @@ function transitionToDashboard(username) {
         ui.panel.classList.add('fade-out'); // Hide login
 
         setTimeout(() => {
-            // Show Dashboard
-            ui.dashboard.classList.remove('hidden');
-            // Trigger reflow
-            void ui.dashboard.offsetWidth;
-            ui.dashboard.classList.add('visible'); // Fade in
-
-            ui.greeting.textContent = `WELCOME ${username.toUpperCase()}`;
-
             // Focus Command Input
             if (ui.cmdInput) ui.cmdInput.focus();
 
-            // Stop extreme warp, settle into cruise
+            // Stop extreme warp
             gameState.warp = false;
-            controls.autoRotateSpeed = 2.0; // Fast spin for energy
 
-            // Add terminal line
-            printLog(`User ${username} authenticated.`);
-            printLog(`Session started.`);
+            // REDIRECT TO CITADEL 3D WORLD
+            setTimeout(() => {
+                window.location.href = "3d-explore.html";
+            }, 500);
 
         }, 1000);
     }, 1500);

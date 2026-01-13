@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE CITADEL | Neural Interface</title>
+    <style>
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-purple: #bc13fe;
+            --glass-bg: rgba(10, 10, 20, 0.8);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            overflow: hidden;
+            background: #000;
+            color: #fff;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        /* HUD - Top Left */
+        .hud-panel {
+            position: absolute;
+            pointer-events: auto;
+            background: var(--glass-bg);
+            padding: 15px;
+            border: 1px solid var(--neon-blue);
+            backdrop-filter: blur(5px);
+        }
+
+        .top-left {
+            top: 20px;
+            left: 20px;
+            width: 250px;
+        }
+
+        h2 {
+            font-size: 1rem;
+            color: var(--neon-blue);
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+
+        p {
+            font-size: 0.8rem;
+            color: #ccc;
+            line-height: 1.4;
+        }
+
+        /* Instructions Overlay */
+        #instructions {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: auto;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 40px;
+            border: 2px solid var(--neon-purple);
+            transition: opacity 0.3s;
+        }
+
+        #instructions.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .key {
+            display: inline-block;
+            padding: 5px 10px;
+            border: 1px solid #fff;
+            border-radius: 4px;
+            margin: 0 2px;
+            font-weight: bold;
+        }
+
+        /* Interaction Prompt */
+        #interact-prompt {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--neon-blue);
+            font-weight: bold;
+            font-size: 1.2rem;
+            text-shadow: 0 0 10px var(--neon-blue);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        /* Crosshair */
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        #crosshair::before,
+        #crosshair::after {
+            content: '';
+            position: absolute;
+            background: #fff;
+            opacity: 0.5;
+        }
+
+        #crosshair::before {
+            top: 9px;
+            left: 0;
+            width: 20px;
+            height: 2px;
+        }
+
+        #crosshair::after {
+            top: 0;
+            left: 9px;
+            width: 2px;
+            height: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="canvas-container"></div>
+
+    <div id="ui-layer">
+        <div class="hud-panel top-left">
+            <h2>THE CITADEL</h2>
+            <p>SECTOR: ALPHA-9<br>STATUS: EXPLORATION MODE</p>
+        </div>
+
+        <div id="instructions">
+            <h1>NEURAL LINK ESTABLISHED</h1>
+            <br>
+            <p>CLICK TO ENGAGE</p>
+            <br>
+            <p><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span>
+                to Move</p>
+            <p><span class="key">MOUSE</span> to Look</p>
+            <p><span class="key">CLICK</span> to Interact</p>
+            <p><span class="key">ESC</span> to Detach</p>
+        </div>
+
+        <div id="crosshair"></div>
+        <div id="interact-prompt">[E] INTERACT</div>
+    </div>
+
+    <!-- MAIN ENGINE -->
+    <script type="module" src="./src/engine/CitadelCore.js"></script>
+</body>
+
+</html>
