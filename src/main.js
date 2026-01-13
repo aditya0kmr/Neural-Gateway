@@ -146,16 +146,35 @@ if (ui.cmdInput) {
                     break;
                 case 'reboot':
                     printLog("REBOOTING SYSTEM...", "#ff0055");
-                    setTimeout(() => location.reload(), 1000);
+                    triggerShutdown();
                     break;
                 case 'logout':
-                    location.reload();
+                    triggerShutdown();
                     break;
                 default:
                     if (cmd.length > 0) printLog(`ERR: Unknown command '${cmd}'`, "#ff0055");
             }
         }
     });
+}
+
+// --- SHUTDOWN SEQUENCE ---
+function triggerShutdown() {
+    printLog("INITIATING SHUTDOWN SEQUENCE...", "#ff0055");
+
+    // Disable UI
+    ui.cmdInput.disabled = true;
+    document.body.style.pointerEvents = "none";
+
+    // Trigger CSS Animation
+    setTimeout(() => {
+        document.body.classList.add('shutdown');
+    }, 500);
+
+    // Hard Reload after animation
+    setTimeout(() => {
+        location.reload();
+    }, 1500);
 }
 
 // --- MODULE BUTTONS ---
@@ -324,7 +343,7 @@ function transitionToDashboard(username) {
 // LOGOUT HANDLER
 if (ui.logoutBtn) {
     ui.logoutBtn.addEventListener('click', () => {
-        location.reload(); // Simple reload to logout
+        triggerShutdown();
     });
 }
 
