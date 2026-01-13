@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Gateway - LOCAL DEBUG V2</title>
+    <style>
+        :root {
+            --glass-bg: rgba(10, 10, 20, 0.8);
+            --glass-border: rgba(0, 243, 255, 0.2);
+            --neon-blue: #00f3ff;
+            --neon-purple: #bc13fe;
+            --neon-red: #ff0055;
+            --text-primary: #ffffff;
+            --font-mono: 'Courier New', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body,
+        html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #020205;
+            color: #fff;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        #ui-layer {
+            position: relative;
+            z-index: 10;
+            height: 100%;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle, transparent, #000 120%);
+        }
+
+        .login-container,
+        .dashboard-container {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            padding: 40px;
+            width: 400px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+            transition: 0.5s;
+        }
+
+        .login-container.fade-out {
+            opacity: 0;
+            transform: scale(0.9);
+            pointer-events: none;
+        }
+
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 30px;
+            letter-spacing: 5px;
+            text-shadow: 0 0 10px var(--neon-blue);
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #333;
+            color: #fff;
+            margin-bottom: 20px;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid var(--neon-blue);
+            background: transparent;
+            color: var(--neon-blue);
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        button:hover {
+            background: var(--neon-blue);
+            color: #000;
+        }
+
+        /* Dashboard */
+        .dashboard-container {
+            width: 80%;
+            max-width: 800px;
+            position: absolute;
+            opacity: 0;
+            transform: translateY(20px);
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            border-top: 2px solid var(--neon-purple);
+        }
+
+        .dashboard-container.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border: 1px solid #333;
+        }
+
+        .card.wide {
+            grid-column: span 2;
+        }
+
+        .terminal-window {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            font-family: var(--font-mono);
+            height: 150px;
+            overflow-y: auto;
+            color: #bbb;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-msg {
+            text-align: center;
+            margin-top: 10px;
+            color: var(--neon-red);
+        }
+
+        .success {
+            color: #33ff33;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
+</head>
+
+<body>
+    <div id="ui-layer">
+        <div class="login-container" id="login-panel">
+            <h1>NEXUS GATEWAY</h1>
+            <form id="login-form">
+                <input type="text" id="username" placeholder="IDENTITY" required>
+                <input type="password" id="password" placeholder="ACCESS CODE" required>
+                <button type="submit" id="btn-login">INITIALIZE</button>
+                <div class="status-msg" id="status-msg"></div>
+            </form>
+        </div>
+
+        <div class="dashboard-container" id="dashboard-panel">
+            <h2 id="user-greeting">WELCOME USER</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>STATUS</h3>
+                    <div style="font-size:1.5rem;color:#00f3ff">ONLINE</div>
+                </div>
+                <div class="card">
+                    <h3>UPLINK</h3>
+                    <div style="font-size:1.5rem">STABLE</div>
+                </div>
+                <div class="card wide">
+                    <h3>TERMINAL</h3>
+                    <div class="terminal-window" id="terminal-feed">
+                        > Initializing...<br>> Ready.
+                    </div>
+                </div>
+            </div>
+            <button onclick="location.reload()" style="border-color:#ff0055; color:#ff0055; margin-top:20px;">TERMINATE
+                SESSION</button>
+        </div>
+    </div>
+
+    <script>
+        // 3D SCENE
+        const scene = new THREE.Scene(); scene.fog = new THREE.FogExp2(0x020205, 0.02);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000); camera.position.z = 8;
+        const renderer = new THREE.WebGLRenderer({ alpha: true }); renderer.setSize(window.innerWidth, window.innerHeight); document.body.appendChild(renderer.domElement);
+        const controls = new THREE.OrbitControls(camera, renderer.domElement); controls.autoRotate = true;
+
+        // Objects
+        const geometry = new THREE.IcosahedronGeometry(1.5, 1);
+        const material = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true });
+        const core = new THREE.Mesh(geometry, material); scene.add(core);
+
+        const starsGeo = new THREE.BufferGeometry();
+        const starsCount = 2000; const pos = new Float32Array(starsCount * 3);
+        for (let i = 0; i < starsCount * 3; i++) pos[i] = (Math.random() - 0.5) * 100;
+        starsGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        const stars = new THREE.Points(starsGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.1 })); scene.add(stars);
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            core.rotation.x += 0.01; core.rotation.y += 0.01;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // UI LOGIC
+        const ui = {
+            form: document.getElementById('login-form'),
+            user: document.getElementById('username'),
+            pass: document.getElementById('password'),
+            status: document.getElementById('status-msg'),
+            panel: document.getElementById('login-panel'),
+            dashboard: document.getElementById('dashboard-panel'),
+            greeting: document.getElementById('user-greeting')
+        };
+
+        ui.form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const u = ui.user.value.toLowerCase();
+            const p = ui.pass.value;
+
+            if (p.length < 6) { ui.status.innerText = "PASSWORD TOO SHORT"; return; }
+
+            ui.status.innerText = "CONNECTING...";
+            await new Promise(r => setTimeout(r, 1000));
+
+            if (u === 'other' || u === 'aadi' || u === 'nanniii') {
+                // SUCCESS
+                ui.status.innerText = "ACCESS GRANTED";
+                ui.status.style.color = "#33ff33";
+
+                setTimeout(() => {
+                    ui.panel.classList.add('fade-out');
+                    setTimeout(() => {
+                        ui.dashboard.classList.add('visible');
+                        ui.greeting.innerText = `WELCOME ${u.toUpperCase()}`;
+                    }, 500);
+                }, 1000);
+            } else {
+                ui.status.innerText = "INVALID CREDENTIALS";
+            }
+        });
+    </script>
+</body>
+
+</html>
