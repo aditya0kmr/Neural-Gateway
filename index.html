@@ -48,10 +48,26 @@
                 </div>
                 <div class="card wide">
                     <h3>DATA STREAM</h3>
-                    <div class="terminal-feed" id="terminal-feed">
-                        > Initializing interface...<br>
-                        > Handshake complete.<br>
-                        > Awaiting input...
+                    <div class="terminal-window">
+                        <div class="terminal-feed" id="terminal-feed">
+                            > Initializing interface...<br>
+                            > Handshake complete.<br>
+                            > Awaiting input...
+                        </div>
+                        <div class="terminal-input-line">
+                            <span>></span>
+                            <input type="text" id="cmd-input" placeholder="Type 'help'..." autocomplete="off">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card wide">
+                    <h3>SYSTEM MODULES</h3>
+                    <div class="module-grid">
+                        <button class="mod-btn" id="btn-firewall" data-active="true">FIREWALL [ON]</button>
+                        <button class="mod-btn" id="btn-core" data-active="true">CORE SYNC [ON]</button>
+                        <button class="mod-btn warning" id="btn-overdrive">OVERDRIVE [OFF]</button>
+                        <button class="mod-btn" id="btn-encryption">ENCRYPTION [ON]</button>
                     </div>
                 </div>
             </div>

@@ -268,13 +268,90 @@ h1 {
     color: var(--neon-blue);
 }
 
-.terminal-feed {
+/* Terminal */
+.terminal-window {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    border: 1px solid #333;
     font-family: var(--font-mono);
+    height: 150px;
+    display: flex;
+    flex-direction: column;
+}
+
+.terminal-feed {
     font-size: 0.9rem;
     color: #bbb;
     line-height: 1.5;
-    height: 100px;
+    flex-grow: 1;
     overflow-y: auto;
+    margin-bottom: 10px;
+    font-size: 0.8rem;
+}
+
+.terminal-input-line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-top: 1px solid #333;
+    padding-top: 5px;
+}
+
+.terminal-input-line span {
+    color: var(--neon-blue);
+    font-weight: bold;
+}
+
+#cmd-input {
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: #fff;
+    font-family: var(--font-mono);
+    width: 100%;
+}
+
+#cmd-input:focus {
+    box-shadow: none;
+}
+
+/* System Modules */
+.module-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+.mod-btn {
+    padding: 10px;
+    border: 1px solid var(--neon-blue);
+    background: rgba(0, 243, 255, 0.1);
+    color: var(--neon-blue);
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mod-btn:hover {
+    background: var(--neon-blue);
+    color: #000;
+}
+
+.mod-btn[data-active="false"] {
+    border-color: #555;
+    color: #555;
+    background: transparent;
+}
+
+.mod-btn.warning {
+    border-color: var(--neon-red);
+    color: var(--neon-red);
+    background: rgba(255, 0, 85, 0.1);
+}
+
+.mod-btn.warning:hover {
+    background: var(--neon-red);
+    color: #fff;
 }
 
 /* Utilities */

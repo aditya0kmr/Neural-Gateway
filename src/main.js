@@ -107,8 +107,83 @@ const ui = {
     dashboard: document.getElementById('dashboard-panel'),
     greeting: document.getElementById('user-greeting'),
     logoutBtn: document.getElementById('btn-logout'),
-    terminal: document.getElementById('terminal-feed')
+    terminal: document.getElementById('terminal-feed'),
+    cmdInput: document.getElementById('cmd-input'),
+    // Modules
+    btnFirewall: document.getElementById('btn-firewall'),
+    btnCore: document.getElementById('btn-core'),
+    btnOverdrive: document.getElementById('btn-overdrive'),
+    btnEncryption: document.getElementById('btn-encryption')
 };
+
+// --- TERMINAL HELPER ---
+function printLog(text, color = "#bbb") {
+    const line = document.createElement('div');
+    line.style.color = color;
+    line.innerHTML = `> ${text}`;
+    ui.terminal.appendChild(line);
+    ui.terminal.scrollTop = ui.terminal.scrollHeight;
+}
+
+// --- CLI LOGIC ---
+if (ui.cmdInput) {
+    ui.cmdInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const cmd = ui.cmdInput.value.trim().toLowerCase();
+            ui.cmdInput.value = '';
+
+            printLog(cmd, "#fff"); // Echo command
+
+            switch (cmd) {
+                case 'help':
+                    printLog("COMMANDS: status, clear, reboot, logout");
+                    break;
+                case 'status':
+                    printLog("SYSTEM: ONLINE | CORE: STABLE | UPLINK: SECURE", "#00f3ff");
+                    break;
+                case 'clear':
+                    ui.terminal.innerHTML = '';
+                    break;
+                case 'reboot':
+                    printLog("REBOOTING SYSTEM...", "#ff0055");
+                    setTimeout(() => location.reload(), 1000);
+                    break;
+                case 'logout':
+                    location.reload();
+                    break;
+                default:
+                    if (cmd.length > 0) printLog(`ERR: Unknown command '${cmd}'`, "#ff0055");
+            }
+        }
+    });
+}
+
+// --- MODULE BUTTONS ---
+function toggleModule(btn, name) {
+    if (!btn) return;
+    const isActive = btn.getAttribute('data-active') === 'true';
+    const newState = !isActive;
+    btn.setAttribute('data-active', newState);
+    btn.textContent = `${name} [${newState ? 'ON' : 'OFF'}]`;
+
+    if (newState) {
+        printLog(`${name} ENABLED`, "#33ff33");
+    } else {
+        printLog(`${name} DISABLED`, "#ff0055");
+    }
+}
+
+if (ui.btnFirewall) ui.btnFirewall.addEventListener('click', () => toggleModule(ui.btnFirewall, "FIREWALL"));
+if (ui.btnCore) ui.btnCore.addEventListener('click', () => toggleModule(ui.btnCore, "CORE SYNC"));
+if (ui.btnEncryption) ui.btnEncryption.addEventListener('click', () => toggleModule(ui.btnEncryption, "ENCRYPTION"));
+
+if (ui.btnOverdrive) {
+    ui.btnOverdrive.addEventListener('click', () => {
+        printLog("WARNING: OVERDRIVE ENGAGED", "#ff0055");
+        gameState.intensity = 8.0; // Spin core fast
+    });
+}
+
 
 function handleTyping() {
     spawnDataPacket(scene, worldObjects);
@@ -230,14 +305,16 @@ function transitionToDashboard(username) {
 
             ui.greeting.textContent = `WELCOME ${username.toUpperCase()}`;
 
+            // Focus Command Input
+            if (ui.cmdInput) ui.cmdInput.focus();
+
             // Stop extreme warp, settle into cruise
             gameState.warp = false;
             controls.autoRotateSpeed = 2.0; // Fast spin for energy
 
             // Add terminal line
-            const line = document.createElement('div');
-            line.innerHTML = `> User ${username} authenticated.<br>> Session started.`;
-            ui.terminal.appendChild(line);
+            printLog(`User ${username} authenticated.`);
+            printLog(`Session started.`);
 
         }, 1000);
     }, 1500);
